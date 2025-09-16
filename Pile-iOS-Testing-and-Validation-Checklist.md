@@ -1,3 +1,90 @@
+## Pile iOS — Testing & Validation Checklist
+
+### Core Functionality
+- [ ] Launch app cold/warm (< 2s cold, < 1s warm)
+- [ ] First-run onboarding and permissions prompts
+- [ ] User can add, edit, delete items; state persists across relaunch
+- [ ] Sync behavior on resume and network change
+- [ ] Error states and empty states render correctly
+- [ ] Navigation: back, deep links, modals, tabs (if any)
+
+### iOS-Specific Features
+- [ ] Haptics trigger on important interactions
+- [ ] Keyboard handling does not obscure inputs; accessory bar visible when needed
+- [ ] Status bar style matches theme and remains legible
+- [ ] Safe area insets respected on all devices and orientations
+- [ ] Face ID/Touch ID gating works and is cancelable/fallbacks properly
+- [ ] Share sheet integration (if implemented) opens and dismisses reliably
+- [ ] App lifecycle: background/foreground events restore UI and sync correctly
+ - [ ] Spotlight indexing for entries (if implemented)
+ - [ ] Siri Shortcuts trigger flows (if implemented)
+ - [ ] Handoff continuity behaves as expected (if implemented)
+
+### Performance Benchmarks
+- [ ] 60 fps scroll in primary lists (measure with Instruments)
+- [ ] No long tasks > 100 ms on main thread during interaction
+- [ ] Route transitions < 250 ms
+- [ ] Memory usage remains stable over 30 min usage without leaks
+- [ ] Startup bundle size minimized; lazy loading verified
+ - [ ] Battery impact acceptable during typical journaling sessions
+ - [ ] Large dataset (1000+ entries) scrolls smoothly and searches quickly
+
+### Offline & Storage
+- [ ] App functions in airplane mode for core flows
+- [ ] Data persists via Filesystem (Directory.Data)
+- [ ] Conflict handling on reconnect is deterministic
+- [ ] Graceful handling of low storage and permission errors
+
+### Security Auditing
+- [ ] No hardcoded production API keys in bundle
+- [ ] Secrets are stored in Keychain, access gated by biometrics if enabled
+- [ ] All requests over HTTPS; certificate pinning if applicable
+- [ ] Sensitive logs disabled in production builds
+- [ ] Privacy policy and data use disclosures align with implementation
+ - [ ] Background blur on app switcher to protect sensitive content
+ - [ ] Clipboard handling avoids leaking sensitive text
+
+### App Store Preparation
+- [ ] App name, bundle id, version, build number set
+- [ ] App Icons and Splash screens correct for all sizes
+- [ ] App Tracking Transparency (if needed) with purpose string
+- [ ] NSFaceIDUsageDescription and other Info.plist usage strings present
+- [ ] Background modes only if necessary, with rationale
+- [ ] Content guidelines: no hidden features, no private APIs
+- [ ] Screenshots for required devices; accurate app description and keywords
+
+### Beta Testing Strategy
+- [ ] Create internal TestFlight group (engineering + stakeholders)
+- [ ] External testers group with target demographics
+- [ ] Feedback capture loop (email, TestFlight notes, in-app link)
+- [ ] Crash and performance monitoring configured (e.g., Sentry/Firebase)
+- [ ] Weekly build cadence; changelog communicated to testers
+
+### Post-Launch Monitoring
+- [ ] Track crash-free sessions, ANR, and cold start times
+- [ ] Monitor API error rates and latency
+- [ ] Track retention (D1/D7), feature adoption, and cohort metrics
+- [ ] Establish on-call and incident response for critical issues
+
+### Automated Testing Setup
+- [ ] Unit tests for state and storage adapter
+- [ ] Integration tests for critical flows (e.g., add/edit/delete)
+- [ ] E2E tests with Detox or WebdriverIO on iOS Simulator
+- [ ] Performance tests using XCTest + Instruments automation
+- [ ] CI pipeline builds, runs tests, and exports IPA/TestFlight
+
+### Device Matrix
+- [ ] iPhone 11, 12/13/14/15 (regular + Pro/Max) iOS 16–17
+- [ ] iPad baseline + recent iPadOS
+- [ ] Dark/Light mode, Large Text/Accessibility settings
+ - [ ] iPhone SE class device for small-screen layout validation
+
+### Exit Criteria for Release
+- [ ] Crash-free session rate ≥ 99.7% over last 1,000 sessions
+- [ ] Cold launch < 2s median on iPhone 12 and newer
+- [ ] All P0 bugs closed; P1s triaged with workarounds
+- [ ] App Store metadata complete; review checklist passed
+
 # Pile iOS Testing & Validation Checklist
 
 ## Phase 1: Core Functionality Testing

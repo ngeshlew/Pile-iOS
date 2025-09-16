@@ -10,6 +10,8 @@ Pile is a desktop app for reflective journaling. It's about simplicity, keeping 
 2. On macOS Open the `.zip` or `.dmg` file and drag the application to the destination of your choice (_optional_), such as your `Applications/` folder. On Windows, use the `.exe` to install.
 3. Finally open the application, create a `New Pile`, and start your reflective journey.
 
+Note: An Ionic + Capacitor mobile app lives in `mobile/`. See `mobile/README.md` for iOS setup.
+
 ### AI reflections (requires OpenAI API access, or Ollama for local AI)
 
 Enhance your journaling experience by integrating OpenAI's GPT AI reflections into Pile. If you have access to OpenAI's GPT-4 API, you can use your API key to:
