@@ -4,8 +4,9 @@ import { MemoryRouter as Router } from 'react-router-dom';
 const container = document.getElementById('root') as HTMLElement;
 const root = createRoot(container);
 
+const isMac = typeof window !== 'undefined' && (window as any).electron?.isMac;
 const wrapperStyle = {
-  background: window.electron.isMac ? 'var(--bg-translucent)' : 'var(--bg)',
+  background: isMac ? 'var(--bg-translucent)' : 'var(--bg)',
 }
 
 root.render(
