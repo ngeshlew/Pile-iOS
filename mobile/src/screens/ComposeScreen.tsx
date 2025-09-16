@@ -4,6 +4,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
 import { Storage } from '../services/storage';
 import { generateReflection } from '../services/ai';
+import { isOffline } from '../services/network';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Compose'>;
 
@@ -26,6 +27,10 @@ export default function ComposeScreen({ navigation }: Props) {
     const trimmed = (content || '').trim();
     if (!trimmed) {
       Alert.alert('Empty', 'Write something first to reflect on.');
+      return;
+    }
+    if (await isOffline()) {
+      Alert.alert('Offline', 'AI reflections require an internet connection.');
       return;
     }
     try {

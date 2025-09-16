@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Button, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, Button, FlatList, TouchableOpacity, Platform } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../App';
 import { JournalPost, Storage } from '../services/storage';
+import * as Haptics from 'expo-haptics';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export default function HomeScreen({ navigation }: Props) {
   const [posts, setPosts] = useState<JournalPost[]>([]);
+
+  useEffect(() => {
+    navigation.setOptions({ headerLargeTitle: Platform.OS === 'ios' });
+  }, [navigation]);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', async () => {
@@ -16,6 +21,11 @@ export default function HomeScreen({ navigation }: Props) {
     });
     return unsubscribe;
   }, [navigation]);
+
+  const onOpen = (id: string) => {
+    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    navigation.navigate('Detail', { id });
+  };
 
   return (
     <View style={{ flex: 1, padding: 16, gap: 12 }}>
@@ -27,7 +37,7 @@ export default function HomeScreen({ navigation }: Props) {
         data={posts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity style={{ paddingVertical: 12 }} onPress={() => navigation.navigate('Detail', { id: item.id })}>
+          <TouchableOpacity style={{ paddingVertical: 12 }} onPress={() => onOpen(item.id)}>
             <Text style={{ fontSize: 16, fontWeight: '600' }} numberOfLines={1}>
               {item.title || 'Untitled entry'}
             </Text>
