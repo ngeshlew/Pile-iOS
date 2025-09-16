@@ -1,4 +1,4 @@
-export * from './img/BoxIcon';
+export * from './img/BoxIcon.jsx';
 export * from './img/BookmarkIcon';
 export * from './img/NewsletterIcon';
 export * from './img/GlobeIcon';
