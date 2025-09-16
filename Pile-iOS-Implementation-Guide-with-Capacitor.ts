@@ -56,7 +56,9 @@ export const packageJsonAdditions = `{
     "ios:build": "npm run build && npx cap copy ios && npx cap sync ios",
     "ios:run:device": "npm run ios:build && npx cap run ios --target=auto",
     "ios:run:sim": "npm run ios:build && npx cap run ios -l --external",
-    "ios:signassets": "node ./scripts/generate-ios-icons-splashes.cjs"
+    "ios:signassets": "node ./scripts/generate-ios-icons-splashes.cjs",
+    "ios:open": "npx cap open ios",
+    "build:ios": "npm run build && npx cap sync ios"
   },
   "capacitornative": {
     "iosDeploymentTarget": "13.0"
@@ -72,7 +74,9 @@ const config: CapacitorConfig = {
   webDir: 'build',
   bundledWebRuntime: false,
   ios: {
-    contentInset: 'always',
+    contentInset: 'automatic',
+    preferredContentMode: 'mobile',
+    scrollEnabled: true,
     allowsLinkPreview: true,
     backgroundColor: '#ffffff',
     limitsNavigationsToAppBoundDomains: true,
@@ -80,6 +84,16 @@ const config: CapacitorConfig = {
   server: {
     cleartext: false,
     androidScheme: 'https',
+  },
+  plugins: {
+    StatusBar: {
+      style: 'dark',
+      backgroundColor: '#ffffff',
+    },
+    Keyboard: {
+      resize: 'body',
+      resizeOnFullScreen: true,
+    },
   },
 };
 
@@ -182,7 +196,14 @@ export class CapacitorStorageAdapter {
   }
 
   async rm(path: string, opts: { recursive?: boolean } = {}): Promise<void> {
-    await Filesystem.deleteFile({ path: normalize(path), directory: this.baseDir });
+    // Try delete file, if it fails try delete directory
+    try {
+      await Filesystem.deleteFile({ path: normalize(path), directory: this.baseDir });
+    } catch {
+      try {
+        await Filesystem.rmdir({ path: normalize(path), directory: this.baseDir, recursive: opts.recursive ?? true });
+      } catch {}
+    }
   }
 
   resolve(...segments: string[]): string {
@@ -308,7 +329,11 @@ import { Route, Redirect } from 'react-router-dom';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 import '@ionic/react/css/core.css';
+import '@ionic/react/css/normalize.css';
+import '@ionic/react/css/structure.css';
+import '@ionic/react/css/typography.css';
 import './theme/variables.css';
+import './styles/app.css';
 
 setupIonicReact({ mode: 'ios' });
 
@@ -363,6 +388,16 @@ ion-content::part(scroll) {
 /* Smooth scrolling and momentum */
 html, body, ion-content {
   -webkit-overflow-scrolling: touch;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ion-color-primary: #428cff;
+    --ion-color-primary-contrast: #ffffff;
+    --ion-background-color: #1e1e1e;
+    --ion-text-color: #ffffff;
+  }
 }
 `;
 

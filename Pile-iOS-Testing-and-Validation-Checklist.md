@@ -16,6 +16,9 @@
 - [ ] Face ID/Touch ID gating works and is cancelable/fallbacks properly
 - [ ] Share sheet integration (if implemented) opens and dismisses reliably
 - [ ] App lifecycle: background/foreground events restore UI and sync correctly
+ - [ ] Spotlight indexing for entries (if implemented)
+ - [ ] Siri Shortcuts trigger flows (if implemented)
+ - [ ] Handoff continuity behaves as expected (if implemented)
 
 ### Performance Benchmarks
 - [ ] 60 fps scroll in primary lists (measure with Instruments)
@@ -23,6 +26,8 @@
 - [ ] Route transitions < 250 ms
 - [ ] Memory usage remains stable over 30 min usage without leaks
 - [ ] Startup bundle size minimized; lazy loading verified
+ - [ ] Battery impact acceptable during typical journaling sessions
+ - [ ] Large dataset (1000+ entries) scrolls smoothly and searches quickly
 
 ### Offline & Storage
 - [ ] App functions in airplane mode for core flows
@@ -36,6 +41,8 @@
 - [ ] All requests over HTTPS; certificate pinning if applicable
 - [ ] Sensitive logs disabled in production builds
 - [ ] Privacy policy and data use disclosures align with implementation
+ - [ ] Background blur on app switcher to protect sensitive content
+ - [ ] Clipboard handling avoids leaking sensitive text
 
 ### App Store Preparation
 - [ ] App name, bundle id, version, build number set
@@ -70,6 +77,7 @@
 - [ ] iPhone 11, 12/13/14/15 (regular + Pro/Max) iOS 16–17
 - [ ] iPad baseline + recent iPadOS
 - [ ] Dark/Light mode, Large Text/Accessibility settings
+ - [ ] iPhone SE class device for small-screen layout validation
 
 ### Exit Criteria for Release
 - [ ] Crash-free session rate ≥ 99.7% over last 1,000 sessions
