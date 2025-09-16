@@ -4,7 +4,8 @@ import { createRoot } from 'react-dom/client';
 
 async function bootstrap() {
   await storage.ensureDir('default-pile');
-  const container = document.getElementById('root') as HTMLElement;
+  const container = document.getElementById('root');
+  if (!container) throw new Error('Missing root element');
   const root = createRoot(container);
   root.render(<App />);
 }
