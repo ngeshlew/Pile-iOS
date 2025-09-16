@@ -1,3 +1,469 @@
+/*
+ Pile iOS Implementation Guide with Capacitor + Ionic
+ ---------------------------------------------------
+ This file contains executable templates, commands, and code scaffolds to convert
+ the Pile desktop React app into an iOS app using Capacitor + Ionic with
+ maximum code reuse. Copy the snippets to your project as indicated.
+
+ Contents
+ - projectSetupCommands: Shell commands to install and configure Capacitor + Ionic
+ - packageJsonAdditions: Recommended scripts and dependencies
+ - capacitorConfigTs: Capacitor configuration template
+ - storageAdapterTs: Electron fs -> Capacitor Filesystem adapter
+ - keychainServiceTs: Secure storage for API keys + optional biometrics
+ - zustandStoreTs: App state with persistence using the storage adapter
+ - ionicAppShellTsx: iOS-optimized app shell with Ionic React
+ - iosThemeCss: iOS styling, safe areas, and system UI tweaks
+ - pluginBootstrapTs: Initialization for Capacitor plugins (haptics, status bar, etc.)
+ - buildAndDeploy: Commands for building, signing, and deploying via Xcode/Fastlane
+*/
+
+export const projectSetupCommands = `#!/usr/bin/env bash
+set -euo pipefail
+
+# 0) From your existing React app root
+# If starting fresh, you can bootstrap Ionic React first:
+# npm create @ionic/react@latest pile-ios -- --no-interactive --template react
+
+# 1) Install Capacitor core and CLI
+npm install --save @capacitor/core @capacitor/app @capacitor/device @capacitor/keyboard @capacitor/haptics @capacitor/share @capacitor/status-bar @capacitor/filesystem @capacitor/preferences
+npm install --save-dev @capacitor/cli
+
+# 2) Optional but recommended: Ionic React UI shell
+npm install --save @ionic/react @ionic/react-router ionicons
+
+# 3) Secure storage + biometrics (community, well-maintained)
+npm install --save @capawesome/capacitor-secure-storage @robingenz/capacitor-fingerprint-auth
+
+# 4) Initialize Capacitor (creates capacitor.config.ts if missing)
+npx cap init Pile com.pile.app --web-dir=build --npm-client=npm --yes
+
+# 5) Add iOS platform
+npx cap add ios
+
+# 6) Build web and sync to native projects
+npm run build
+npx cap sync
+
+# 7) Open Xcode to configure signing
+npx cap open ios
+`;
+
+export const packageJsonAdditions = `{
+  "scripts": {
+    "cap:sync": "npx cap sync",
+    "cap:ios": "npx cap open ios",
+    "ios:build": "npm run build && npx cap copy ios && npx cap sync ios",
+    "ios:run:device": "npm run ios:build && npx cap run ios --target=auto",
+    "ios:run:sim": "npm run ios:build && npx cap run ios -l --external",
+    "ios:signassets": "node ./scripts/generate-ios-icons-splashes.cjs"
+  },
+  "capacitornative": {
+    "iosDeploymentTarget": "13.0"
+  },
+  "resolutions": {}
+}`;
+
+export const capacitorConfigTs = `import { CapacitorConfig } from '@capacitor/cli';
+
+const config: CapacitorConfig = {
+  appId: 'com.pile.app',
+  appName: 'Pile',
+  webDir: 'build',
+  bundledWebRuntime: false,
+  ios: {
+    contentInset: 'always',
+    allowsLinkPreview: true,
+    backgroundColor: '#ffffff',
+    limitsNavigationsToAppBoundDomains: true,
+  },
+  server: {
+    cleartext: false,
+    androidScheme: 'https',
+  },
+};
+
+export default config;`;
+
+export const storageAdapterTs = `// src/storage/CapacitorStorageAdapter.ts
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+
+export type FileWriteOptions = {
+  encoding?: 'utf8' | 'base64';
+  recursive?: boolean;
+};
+
+export type FileReadOptions = {
+  encoding?: 'utf8' | 'base64';
+};
+
+export type StatInfo = {
+  type: 'file' | 'directory' | 'unknown';
+  size: number;
+  mtime?: number;
+};
+
+function normalize(path: string): string {
+  return path.replace(/\\\\/g, '/').replace(/\+/g, '/');
+}
+
+function join(...parts: string[]): string {
+  return normalize(parts.join('/'))
+    .replace(/\/\/+/, '/')
+    .replace(/\/\.$/, '')
+    .replace(/\/\.\//g, '/');
+}
+
+export class CapacitorStorageAdapter {
+  private readonly baseDir: Directory = Directory.Data;
+
+  async readFile(path: string, options: FileReadOptions = {}): Promise<string | Uint8Array> {
+    const res = await Filesystem.readFile({
+      path: normalize(path),
+      directory: this.baseDir,
+      encoding: options.encoding === 'utf8' ? Encoding.UTF8 : undefined,
+    });
+    if (options.encoding === 'utf8') return res.data as string;
+    // Capacitor returns base64 for binary; convert to Uint8Array
+    const base64 = res.data as string;
+    const binary = atob(base64);
+    const buffer = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) buffer[i] = binary.charCodeAt(i);
+    return buffer;
+  }
+
+  async writeFile(path: string, data: string | Uint8Array, options: FileWriteOptions = {}): Promise<void> {
+    const normalizedPath = normalize(path);
+    const encoding = options.encoding === 'utf8' ? Encoding.UTF8 : undefined;
+    let payload: string;
+    if (typeof data === 'string') {
+      payload = data;
+    } else {
+      // Convert binary to base64 for Capacitor
+      let binary = '';
+      data.forEach((b) => (binary += String.fromCharCode(b)));
+      payload = btoa(binary);
+    }
+    try {
+      await Filesystem.writeFile({ path: normalizedPath, directory: this.baseDir, data: payload, encoding, recursive: options.recursive ?? true });
+    } catch (err: any) {
+      if (String(err).includes('No such file or directory')) {
+        const dir = normalizedPath.substring(0, normalizedPath.lastIndexOf('/'));
+        if (dir) await this.mkdir(dir, { recursive: true });
+        await Filesystem.writeFile({ path: normalizedPath, directory: this.baseDir, data: payload, encoding, recursive: true });
+        return;
+      }
+      throw err;
+    }
+  }
+
+  async mkdir(path: string, opts: { recursive?: boolean } = {}): Promise<void> {
+    await Filesystem.mkdir({ path: normalize(path), directory: this.baseDir, recursive: opts.recursive ?? true });
+  }
+
+  async readdir(path: string): Promise<string[]> {
+    const res = await Filesystem.readdir({ path: normalize(path), directory: this.baseDir });
+    return res.files.map((f) => (typeof f === 'string' ? f : f.name));
+  }
+
+  async exists(path: string): Promise<boolean> {
+    try {
+      await Filesystem.stat({ path: normalize(path), directory: this.baseDir });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async stat(path: string): Promise<StatInfo> {
+    const res = await Filesystem.stat({ path: normalize(path), directory: this.baseDir });
+    // Capacitor's type can be 'file' | 'directory'
+    return { type: (res.type as 'file' | 'directory') ?? 'unknown', size: res.size ?? 0, mtime: res.mtime };
+  }
+
+  async rm(path: string, opts: { recursive?: boolean } = {}): Promise<void> {
+    await Filesystem.deleteFile({ path: normalize(path), directory: this.baseDir });
+  }
+
+  resolve(...segments: string[]): string {
+    return join(...segments);
+  }
+}
+
+export const storage = new CapacitorStorageAdapter();
+`;
+
+export const keychainServiceTs = `// src/secure/KeychainService.ts
+import { SecureStorage } from '@capawesome/capacitor-secure-storage';
+import { FingerprintAuth } from '@robingenz/capacitor-fingerprint-auth';
+
+export type SecretScope = 'api' | 'session' | 'userprefs';
+
+function scopeKey(scope: SecretScope, key: string): string {
+  return \
+    'pile:' + scope + ':' + key;
+}
+
+export class KeychainService {
+  async isBiometricsAvailable(): Promise<boolean> {
+    try {
+      const res = await FingerprintAuth.isAvailable();
+      return res.has || false;
+    } catch {
+      return false;
+    }
+  }
+
+  async setSecret(key: string, value: string, scope: SecretScope = 'api', requireBiometrics = false): Promise<void> {
+    const itemKey = scopeKey(scope, key);
+    if (requireBiometrics && (await this.isBiometricsAvailable())) {
+      await FingerprintAuth.verify({ reason: 'Unlock Pile secrets' });
+    }
+    await SecureStorage.set({ key: itemKey, value });
+  }
+
+  async getSecret(key: string, scope: SecretScope = 'api', requireBiometrics = false): Promise<string | null> {
+    const itemKey = scopeKey(scope, key);
+    if (requireBiometrics && (await this.isBiometricsAvailable())) {
+      await FingerprintAuth.verify({ reason: 'Access secure data' });
+    }
+    try {
+      const res = await SecureStorage.get({ key: itemKey });
+      return res.value ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async deleteSecret(key: string, scope: SecretScope = 'api'): Promise<void> {
+    try {
+      await SecureStorage.remove({ key: scopeKey(scope, key) });
+    } catch {}
+  }
+}
+
+export const keychain = new KeychainService();
+`;
+
+export const zustandStoreTs = `// src/state/store.ts
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { storage } from '../storage/CapacitorStorageAdapter';
+
+export type Item = {
+  id: string;
+  title: string;
+  createdAt: number;
+  content: string;
+};
+
+type AppState = {
+  items: Item[];
+  addItem: (item: Item) => void;
+  removeItem: (id: string) => void;
+  updateItem: (id: string, patch: Partial<Item>) => void;
+};
+
+// Custom storage provider backed by Capacitor Filesystem
+const fsStorage = createJSONStorage(() => ({
+  getItem: async (name: string) => {
+    try {
+      const exists = await storage.exists(name + '.json');
+      if (!exists) return null;
+      const data = (await storage.readFile(name + '.json', { encoding: 'utf8' })) as string;
+      return data;
+    } catch {
+      return null;
+    }
+  },
+  setItem: async (name: string, value: string) => {
+    await storage.writeFile(name + '.json', value, { encoding: 'utf8', recursive: true });
+  },
+  removeItem: async (name: string) => {
+    await storage.rm(name + '.json');
+  },
+}));
+
+export const useAppStore = create<AppState>()(
+  persist(
+    (set) => ({
+      items: [],
+      addItem: (item) => set((s) => ({ items: [item, ...s.items] })),
+      removeItem: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
+      updateItem: (id, patch) => set((s) => ({ items: s.items.map((i) => (i.id === id ? { ...i, ...patch } : i)) })),
+    }),
+    {
+      name: 'pile-state',
+      storage: fsStorage,
+      partialize: (s) => ({ items: s.items }),
+    }
+  )
+);
+`;
+
+export const ionicAppShellTsx = `// src/App.tsx
+import React from 'react';
+import { IonApp, IonContent, IonHeader, IonTitle, IonToolbar, IonReactRouter, IonRouterOutlet, setupIonicReact } from '@ionic/react';
+import { Route, Redirect } from 'react-router-dom';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+
+import '@ionic/react/css/core.css';
+import './theme/variables.css';
+
+setupIonicReact({ mode: 'ios' });
+
+const Home = React.lazy(() => import('./screens/Home'));
+
+export default function App() {
+  return (
+    <IonApp>
+      <IonReactRouter>
+        <IonRouterOutlet>
+          <Route path="/home" render={() => (
+            <>
+              <IonHeader>
+                <IonToolbar>
+                  <IonTitle>Pile</IonTitle>
+                </IonToolbar>
+              </IonHeader>
+              <IonContent fullscreen className="ion-padding">
+                <React.Suspense fallback={<div />}> 
+                  <Home />
+                </React.Suspense>
+              </IonContent>
+            </>
+          )} exact />
+          <Redirect exact from="/" to="/home" />
+        </IonRouterOutlet>
+      </IonReactRouter>
+    </IonApp>
+  );
+}
+
+export async function impact() {
+  try {
+    await Haptics.impact({ style: ImpactStyle.Medium });
+  } catch {}
+}
+`;
+
+export const iosThemeCss = `/* src/theme/variables.css */
+:root {
+  --ion-color-primary: #0d6efd;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-background-color: #ffffff;
+  --ion-text-color: #0f1623;
+}
+
+/* Respect safe areas */
+ion-content::part(scroll) {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Smooth scrolling and momentum */
+html, body, ion-content {
+  -webkit-overflow-scrolling: touch;
+}
+`;
+
+export const pluginBootstrapTs = `// src/platform/ios/bootstrap.ts
+import { App } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { Keyboard } from '@capacitor/keyboard';
+
+export async function bootstrapIOS(): Promise<void> {
+  try {
+    await StatusBar.setStyle({ style: Style.Dark });
+    await StatusBar.setOverlaysWebView({ overlay: false });
+  } catch {}
+
+  Keyboard.setAccessoryBarVisible({ isVisible: true }).catch(() => {});
+
+  App.addListener('appStateChange', ({ isActive }) => {
+    // Add analytics/resume handling as needed
+    if (isActive) {
+      // resume
+    } else {
+      // background
+    }
+  });
+}
+`;
+
+export const buildAndDeploy = `# Build and deploy notes
+
+## Manual via Xcode
+1. npm run ios:build
+2. npx cap open ios
+3. In Xcode: set Team, Bundle Identifier, Signing & Capabilities.
+4. Product > Archive > Distribute App > App Store Connect or TestFlight.
+
+## Fastlane (optional)
+Fastfile template (place in ios/Fastfile):
+
+lane :beta do
+  build_app(
+    scheme: "App",
+    export_method: "app-store"
+  )
+  upload_to_testflight(
+    skip_waiting_for_build_processing: true
+  )
+end
+
+lane :release do
+  build_app(
+    scheme: "App",
+    export_method: "app-store"
+  )
+  upload_to_app_store(
+    submit_for_review: false
+  )
+end
+`;
+
+export const migrationNotes = `Migration Guide from Electron to Capacitor
+----------------------------------------------------------------
+1) Replace Node/Electron fs calls with CapacitorStorageAdapter
+   - fs.readFile -> storage.readFile('path', { encoding: 'utf8' })
+   - fs.writeFile -> storage.writeFile('path', data, { encoding: 'utf8' })
+   - fs.mkdir/readdir/stat/unlink -> adapter equivalents
+
+2) Replace IPC invocations with direct service calls or Capacitor plugins
+   - window.electron.ipcRenderer.invoke('openExternal', url) -> window.open(url, '_system') or InAppBrowser plugin as needed
+   - Native dialogs -> use Ionic modals/toasts or community plugins
+
+3) Environment and secrets
+   - Do not ship production OpenAI keys in the bundle.
+   - Use KeychainService for end-user keys; require biometrics for read access if desired.
+
+4) Navigation and windows
+   - Replace Electron windows with Ionic routes and modals.
+   - Use split-pane for iPad large-screen layouts.
+
+5) Performance
+   - Enable code splitting; lazy-load heavy routes.
+   - Virtualize large lists; avoid layout thrashing; use CSS containment where possible.
+
+6) Offline
+   - Persist essential data via Filesystem (Directory.Data) and a small in-memory cache.
+   - Implement background sync on app resume.
+`;
+
+export default {
+  projectSetupCommands,
+  packageJsonAdditions,
+  capacitorConfigTs,
+  storageAdapterTs,
+  keychainServiceTs,
+  zustandStoreTs,
+  ionicAppShellTsx,
+  iosThemeCss,
+  pluginBootstrapTs,
+  buildAndDeploy,
+  migrationNotes,
+};
+
 // ===================================================
 // PILE iOS CONVERSION - IMPLEMENTATION GUIDE
 // ===================================================
