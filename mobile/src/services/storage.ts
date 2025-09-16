@@ -7,6 +7,7 @@ export type JournalPost = {
   content: string;
   createdAt: number;
   updatedAt?: number;
+  attachments?: string[]; // local URIs
 };
 
 const INDEX_KEY = 'posts-index';
@@ -37,7 +38,6 @@ export const Storage = {
     const versionRaw = await AsyncStorage.getItem(STORAGE_VERSION_KEY);
     const version = versionRaw ? Number(versionRaw) : 0;
     if (!version) {
-      // Fresh install: set version and empty index
       await AsyncStorage.multiSet([
         [STORAGE_VERSION_KEY, String(CURRENT_VERSION)],
         [INDEX_KEY, JSON.stringify([])],
@@ -45,8 +45,6 @@ export const Storage = {
       return;
     }
     if (version < CURRENT_VERSION) {
-      // Future migrations can be added here
-      // Example: if (version < 2) { await migrateToV2(); }
       await AsyncStorage.setItem(STORAGE_VERSION_KEY, String(CURRENT_VERSION));
     }
   },
@@ -67,12 +65,13 @@ export const Storage = {
     return raw ? (JSON.parse(raw) as JournalPost) : null;
   },
 
-  async createPost(input: { title?: string; content: string }): Promise<JournalPost> {
+  async createPost(input: { title?: string; content: string; attachments?: string[] }): Promise<JournalPost> {
     const id = await generateId();
     const post: JournalPost = {
       id,
       title: input.title,
       content: input.content,
+      attachments: input.attachments?.slice() || [],
       createdAt: Date.now(),
     };
     const ids = await readIndex();
@@ -84,7 +83,7 @@ export const Storage = {
     return post;
   },
 
-  async updatePost(id: string, update: Partial<Pick<JournalPost, 'title' | 'content'>>): Promise<JournalPost | null> {
+  async updatePost(id: string, update: Partial<Pick<JournalPost, 'title' | 'content' | 'attachments'>>): Promise<JournalPost | null> {
     const raw = await AsyncStorage.getItem(`post:${id}`);
     if (!raw) return null;
     const prev = JSON.parse(raw) as JournalPost;
@@ -129,15 +128,21 @@ export const Storage = {
 
     for (const post of incoming) {
       if (!post?.id || existingIds.has(post.id)) continue;
-      toAdd.push(post);
-      existingIds.add(post.id);
+      // sanitize
+      const clean: JournalPost = {
+        id: String(post.id),
+        title: post.title || undefined,
+        content: post.content || '',
+        createdAt: Number(post.createdAt) || Date.now(),
+        updatedAt: post.updatedAt ? Number(post.updatedAt) : undefined,
+        attachments: Array.isArray(post.attachments) ? post.attachments.filter(Boolean) : [],
+      };
+      toAdd.push(clean);
+      existingIds.add(clean.id);
     }
 
     const newIds = Array.from(existingIds);
-    const pairs: [string, string][] = toAdd.map((p) => [
-      `post:${p.id}`,
-      JSON.stringify(p),
-    ]);
+    const pairs = toAdd.map((p) => [`post:${p.id}`, JSON.stringify(p)] as [string, string]);
     if (pairs.length) {
       await AsyncStorage.multiSet(pairs);
     }
