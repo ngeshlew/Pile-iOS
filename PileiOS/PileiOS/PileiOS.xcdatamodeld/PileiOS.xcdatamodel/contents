@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="false" userDefinedModelVersionIdentifier="">
+    <entity name="Pile" representedClassName="Pile" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <attribute name="theme" optional="YES" attributeType="String" defaultValueString="light"/>
+        <attribute name="aiPrompt" optional="YES" attributeType="String"/>
+        <relationship name="entries" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Entry" inverseName="pile" inverseEntity="Entry"/>
+    </entity>
+    <entity name="Entry" representedClassName="Entry" syncable="YES" codeGenerationType="class">
+        <attribute name="content" optional="YES" attributeType="String"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isAI" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="isReply" optional="YES" attributeType="Boolean" usesScalarValueType="YES"/>
+        <attribute name="title" optional="YES" attributeType="String"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="embedding" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromDataTransformer" customClassName="[Float]"/>
+        <relationship name="attachments" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Attachment" inverseName="entry" inverseEntity="Attachment"/>
+        <relationship name="highlights" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Highlight" inverseName="entry" inverseEntity="Highlight"/>
+        <relationship name="pile" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Pile" inverseName="entries" inverseEntity="Pile"/>
+        <relationship name="replies" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Entry" inverseName="parentEntry" inverseEntity="Entry"/>
+        <relationship name="parentEntry" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Entry" inverseName="replies" inverseEntity="Entry"/>
+        <relationship name="tags" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Tag" inverseName="entries" inverseEntity="Tag"/>
+    </entity>
+    <entity name="Attachment" representedClassName="Attachment" syncable="YES" codeGenerationType="class">
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="fileName" optional="YES" attributeType="String"/>
+        <attribute name="filePath" optional="YES" attributeType="String"/>
+        <attribute name="fileSize" optional="YES" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="mimeType" optional="YES" attributeType="String"/>
+        <attribute name="thumbnailPath" optional="YES" attributeType="String"/>
+        <relationship name="entry" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Entry" inverseName="attachments" inverseEntity="Entry"/>
+    </entity>
+    <entity name="Tag" representedClassName="Tag" syncable="YES" codeGenerationType="class">
+        <attribute name="color" optional="YES" attributeType="String" defaultValueString="#007AFF"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="name" optional="YES" attributeType="String"/>
+        <relationship name="entries" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Entry" inverseName="tags" inverseEntity="Entry"/>
+    </entity>
+    <entity name="Highlight" representedClassName="Highlight" syncable="YES" codeGenerationType="class">
+        <attribute name="color" optional="YES" attributeType="String" defaultValueString="#FFD700"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="text" optional="YES" attributeType="String"/>
+        <relationship name="entry" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Entry" inverseName="highlights" inverseEntity="Entry"/>
+    </entity>
+    <entity name="AISettings" representedClassName="AISettings" syncable="YES" codeGenerationType="class">
+        <attribute name="apiKey" optional="YES" attributeType="String"/>
+        <attribute name="baseURL" optional="YES" attributeType="String" defaultValueString="https://api.openai.com/v1"/>
+        <attribute name="embeddingModel" optional="YES" attributeType="String" defaultValueString="text-embedding-3-small"/>
+        <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="model" optional="YES" attributeType="String" defaultValueString="gpt-4o"/>
+        <attribute name="provider" optional="YES" attributeType="String" defaultValueString="openai"/>
+    </entity>
+    <elements>
+        <element name="Pile" positionX="-63" positionY="-18" width="128" height="89"/>
+        <element name="Entry" positionX="-63" positionY="81" width="128" height="134"/>
+        <element name="Attachment" positionX="75" positionY="-18" width="128" height="104"/>
+        <element name="Tag" positionX="75" positionY="86" width="128" height="74"/>
+        <element name="Highlight" positionX="75" positionY="170" width="128" height="89"/>
+        <element name="AISettings" positionX="-63" positionY="225" width="128" height="104"/>
+    </elements>
+</model>
