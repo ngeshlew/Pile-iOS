@@ -1,0 +1,10 @@
+ion-content::part(scroll) {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.journal-container {
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
