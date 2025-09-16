@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useColorScheme, View } from 'react-native';
+import { useColorScheme, View, Alert } from 'react-native';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import HomeScreen from './screens/HomeScreen';
@@ -9,6 +9,7 @@ import DetailScreen from './screens/DetailScreen';
 import { Storage } from './services/storage';
 import OfflineBanner from './components/OfflineBanner';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
+import { AppLock } from './services/appLock';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -25,6 +26,12 @@ export default function App() {
 
   useEffect(() => {
     Storage.ensureInitialized();
+    (async () => {
+      const ok = await AppLock.authenticateIfEnabled();
+      if (!ok) {
+        Alert.alert('Locked', 'Authentication failed. The app will close.');
+      }
+    })();
   }, []);
 
   return (

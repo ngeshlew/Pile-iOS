@@ -3,9 +3,8 @@ import * as FileSystem from 'expo-file-system';
 
 describe('Storage', () => {
   beforeEach(async () => {
-    // reset AsyncStorage mock by clearing keys used in storage
-    // @ts-ignore
-    await require('@react-native-async-storage/async-storage').default.clear();
+    const asyncStorage: any = require('@react-native-async-storage/async-storage').default;
+    await asyncStorage.clear();
   });
 
   it('creates and retrieves a post', async () => {
@@ -20,9 +19,8 @@ describe('Storage', () => {
     await Storage.createPost({ content: 'One' });
     const { uri } = await Storage.exportAll();
 
-    // Mock reading exported content back
     const content = JSON.stringify({ posts: await Storage.getAllPosts() });
-    (FileSystem.readAsStringAsync as jest.Mock).mockResolvedValueOnce(content);
+    (FileSystem.readAsStringAsync as unknown as jest.Mock).mockResolvedValueOnce(content);
 
     const res = await Storage.importFrom('file:///fake.json');
     expect(res.imported + res.skipped).toBeGreaterThanOrEqual(1);

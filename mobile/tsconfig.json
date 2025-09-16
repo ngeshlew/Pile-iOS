@@ -12,6 +12,6 @@
     "paths": { "@/*": ["src/*"] },
     "skipLibCheck": true
   },
-  "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"]
+  "include": ["**/*.ts", "**/*.tsx", "src/types/**/*.d.ts"],
+  "exclude": ["node_modules", "__tests__"]
 }

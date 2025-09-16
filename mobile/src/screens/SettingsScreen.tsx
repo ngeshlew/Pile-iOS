@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Button, Alert } from 'react-native';
+import { View, Text, TextInput, Button, Alert, Switch } from 'react-native';
 import { Secure } from '../services/secure';
 import { Storage } from '../services/storage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
+import { AppLock } from '../services/appLock';
+import { enableEncryption, clearEncryptionKey, isEncryptionEnabled } from '../services/encryption';
 
 export default function SettingsScreen() {
   const [apiKey, setApiKey] = useState<string>('');
+  const [lockEnabled, setLockEnabled] = useState<boolean>(false);
+  const [encEnabled, setEncEnabled] = useState<boolean>(false);
 
   useEffect(() => {
     Secure.getApiKey().then((key) => setApiKey(key || ''));
+    AppLock.isEnabled().then(setLockEnabled);
+    isEncryptionEnabled().then(setEncEnabled);
   }, []);
 
   const onSave = async () => {
@@ -42,6 +48,17 @@ export default function SettingsScreen() {
     }
   };
 
+  const onToggleLock = async (value: boolean) => {
+    setLockEnabled(value);
+    await AppLock.setEnabled(value);
+  };
+
+  const onToggleEncryption = async (value: boolean) => {
+    setEncEnabled(value);
+    if (value) await enableEncryption();
+    else await clearEncryptionKey();
+  };
+
   return (
     <View style={{ flex: 1, padding: 16, gap: 12 }}>
       <Text style={{ fontWeight: '600' }}>OpenAI API Key</Text>
@@ -55,6 +72,18 @@ export default function SettingsScreen() {
         style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 10 }}
       />
       <Button title="Save" onPress={onSave} />
+
+      <View style={{ height: 1, backgroundColor: '#eee', marginVertical: 12 }} />
+
+      <Text style={{ fontWeight: '600' }}>Privacy</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text>App Lock (Face ID/Touch ID)</Text>
+        <Switch value={lockEnabled} onValueChange={onToggleLock} />
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text>At-rest Encryption (content)</Text>
+        <Switch value={encEnabled} onValueChange={onToggleEncryption} />
+      </View>
 
       <View style={{ height: 1, backgroundColor: '#eee', marginVertical: 12 }} />
 
