@@ -5,15 +5,15 @@ import Home from './pages/Home';
 import Pile from './pages/Pile';
 import License from './pages/License';
 import CreatePile from './pages/CreatePile';
-import { PilesContextProvider } from './context/PilesContext';
-import { IndexContextProvider } from './context/IndexContext';
-import { TagsContextProvider } from './context/TagsContext';
-import { TimelineContextProvider } from './context/TimelineContext';
-import { AIContextProvider } from './context/AIContext';
-import { HighlightsContextProvider } from './context/HighlightsContext';
-import { LinksContextProvider } from './context/LinksContext';
-import { ToastsContextProvider } from './context/ToastsContext';
-import { AutoUpdateContextProvider } from './context/AutoUpdateContext';
+import { PilesContextProvider } from './context/PilesContext.jsx';
+import { IndexContextProvider } from './context/IndexContext.jsx';
+import { TagsContextProvider } from './context/TagsContext.jsx';
+import { TimelineContextProvider } from './context/TimelineContext.jsx';
+import { AIContextProvider } from './context/AIContext.jsx';
+import { HighlightsContextProvider } from './context/HighlightsContext.jsx';
+import { LinksContextProvider } from './context/LinksContext.jsx';
+import { ToastsContextProvider } from './context/ToastsContext.jsx';
+import { AutoUpdateContextProvider } from './context/AutoUpdateContext.jsx';
 
 if ('scrollRestoration' in history) {
   history.scrollRestoration = 'manual';
